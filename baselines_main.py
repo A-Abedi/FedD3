@@ -17,6 +17,7 @@ from fed_baselines.server_fednova import FedNovaServer
 
 from postprocessing.recorder import Recorder
 from preprocessing.baselines_dataloader import divide_data
+from preprocessing.uda_dataloader import divide_domain_data
 from utils.models import *
 
 json_types = (list, dict, str, int, float, bool, type(None))
@@ -57,6 +58,8 @@ def fed_args():
     parser.add_argument('-cie', '--client-instance_n_epoch', type=int, required=True, help='Number of local training epochs in clients')
     parser.add_argument('-sim', '--client-instance_momentum', type=float, required=True, help='Momentum of local training in clients')
     parser.add_argument('-sin', '--client-instance_n_worker', type=int, required=True, help='Number of workers in the server')
+    parser.add_argument('-dd', '--domain-dir', type=str, default=None, help='Directory of domain txt files for UDA')
+    parser.add_argument('-td', '--target-domain', type=str, default=None, help='Name of target domain txt file without extension')
 
     args = parser.parse_args()
     return args
@@ -71,7 +74,7 @@ def fed_run():
     algo_list = ["FedAvg", "SCAFFOLD", "FedProx", "FedNova"]
     assert args.client_instance in algo_list, "The federated learning algorithm is not supported"
 
-    dataset_list = ['MNIST', 'CIFAR10', 'FashionMNIST', 'SVHN', 'CIFAR100']
+    dataset_list = ['MNIST', 'CIFAR10', 'FashionMNIST', 'SVHN', 'CIFAR100', 'OFFICEHOME']
     assert args.sys_dataset in dataset_list, "The dataset is not supported"
 
     model_list = ["LeNet", 'AlexCifarNet', "ResNet18", "ResNet34", "ResNet50", "ResNet101", "ResNet152", "CNN"]
@@ -84,8 +87,18 @@ def fed_run():
     client_dict = {}
     recorder = Recorder()
 
-    trainset_config, testset = divide_data(num_client=args.sys_n_client, num_local_class=args.sys_n_local_class, dataset_name=args.sys_dataset,
-                                           i_seed=args.sys_i_seed)
+    if args.domain_dir:
+        assert args.target_domain is not None, "Target domain must be specified when using domain-dir"
+        all_txts = [os.path.join(args.domain_dir, f) for f in os.listdir(args.domain_dir) if f.endswith('.txt')]
+        target_txt = os.path.join(args.domain_dir, args.target_domain)
+        if not target_txt.endswith('.txt'):
+            target_txt += '.txt'
+        source_txts = [x for x in all_txts if os.path.basename(x) != os.path.basename(target_txt)]
+        args.sys_n_client = len(source_txts)
+        trainset_config, testset = divide_domain_data(source_txts, target_txt)
+    else:
+        trainset_config, testset = divide_data(num_client=args.sys_n_client, num_local_class=args.sys_n_local_class, dataset_name=args.sys_dataset,
+                                               i_seed=args.sys_i_seed)
     max_acc = 0
     # Initialize the clients w.r.t. the federated learning algorithms and the specific federated settings
     for client_id in trainset_config['users']:

@@ -99,6 +99,12 @@ class FedClient(object):
               "starts distilling %d " % len(self._train_data['y']) +
               "data points into %s data points" % k)
 
+        n_classes = len(torch.unique(self._train_data['y']))
+        if k % n_classes != 0:
+            raise ValueError(
+                f"Number of classes {n_classes} must divide k={k}. "
+                "Please choose --client-n_dd accordingly.")
+
         params = distill_kip_unit(
             np.array(self._train_data['x'].squeeze(1).permute(0, 2, 3, 1)),
             np.array(self._train_data['y'].squeeze()), num_dd_epoch=num_train_steps, seed=seed, k=k, lr=lr,

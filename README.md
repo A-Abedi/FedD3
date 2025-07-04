@@ -66,7 +66,7 @@ python fedd3_main.py -nc 500 \
 
 - `--sys-n_client` `-nc`: Number of clients
 - `--sys-n_local_class` `-ck`: Number of classes in each client
-- `--sys-dataset` `-ds`: Dataset name (one of "MNIST", "CIFAR-10", "FashionMnist", "SVHN", or "CIFAR100")
+- `--sys-dataset` `-ds`: Dataset name (one of "MNIST", "CIFAR-10", "FashionMnist", "SVHN", or "CIFAR100", "OFFICEHOME")
 - `--sys-model` `-md`: Model name (e.g., "LeNet" for MNIST, "AlexCifarNet" for CIFAR-10, "CNN" for CIFAR-100)
 - `--sys-i_seed` `-is`: Seed used in experiments
 - `--sys-res_root` `-rr`: Root directory of results
@@ -96,6 +96,11 @@ python fedd3_main.py -nc 500 \
 * **Examples II** Run FedD3 on Non-IID MNIST with 500 clients:
 `python fedd3_main.py -nc 500 -ck 2 -ds 'MNIST' -md 'LeNet' -is 0 -rr 'results' 
 -sne 500 -sbs 50 -slr 0.001 -smt 0.9 -snw 1 -cis 'kip_distill' -cnd 2 -cil 0.004 -cib 10 -cie 3000 -cit 0.999`
+* **Example III** Run FedD3 for Unsupervised Domain Adaptation on OfficeHome:
+`python fedd3_main.py -nc 3 -ck 65 -ds 'OFFICEHOME' -md 'ResNet18' -is 0 -rr 'results'
+-sne 500 -sbs 32 -slr 0.001 -smt 0.9 -snw 1
+-cis 'kip_distill' -cnd 65 -cil 0.004 -cib 10 -cie 3000 -cit 0.999
+-dd '/path/to/domain_txts' -td 'Real_World.txt'`
   
 
 * **Results**
@@ -128,7 +133,7 @@ python baselines_main.py -nc 10 \
 
 - `--sys-n_client` `-nc`: Number of clients
 - `--sys-n_local_class` `-ck`: Number of classes in each client
-- `--sys-dataset` `-ds`: Dataset name (one of "MNIST", "CIFAR10", "FashionMnist", "SVHN", or "CIFAR100")
+- `--sys-dataset` `-ds`: Dataset name (one of "MNIST", "CIFAR10", "FashionMnist", "SVHN", or "CIFAR100", "OFFICEHOME")
 - `--sys-model` `-md`: Model name
 - `--sys-i_seed` `-is`: Seed used in experiments
 - `--sys-res_root` `-rr`: Root directory of the results

@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
 import torch
+import os
 import random
 import numpy as np
 import argparse
 from preprocessing.fedd3_dataloader import divide_data
+from preprocessing.uda_dataloader import divide_domain_data
 from fedd3.fedd3_client import FedClient
 from fedd3.fedd3_server import FedServer
 
@@ -36,6 +38,8 @@ def fed_args():
     parser.add_argument('-cib', '--client-instance_bs', type=int, required=True, help='Batch size in clients')
     parser.add_argument('-cie', '--client-instance_max_n_epoch', type=int, required=True, help='Maximal number of epochs in clients')
     parser.add_argument('-cit', '--client-instance_threshold', type=float, required=True, help='Accuracy threshold for dataset distillation in clients')
+    parser.add_argument('-dd', '--domain-dir', type=str, default=None, help='Directory of domain txt files for UDA')
+    parser.add_argument('-td', '--target-domain', type=str, default=None, help='Name of target domain txt file without extension')
 
     args = parser.parse_args()
     return args
@@ -50,7 +54,7 @@ def main():
     mode_list = ["all_select", "kip_distill", "gmm", "dbscan"]
     assert args.client_instance in mode_list, "The mode is not supported"
 
-    dataset_list = ['MNIST', 'CIFAR10', 'FashionMNIST', 'SVHN', 'CIFAR100']
+    dataset_list = ['MNIST', 'CIFAR10', 'FashionMNIST', 'SVHN', 'CIFAR100', 'OFFICEHOME']
     assert args.sys_dataset in dataset_list, "The dataset is not supported"
 
     model_list = ["LeNet", 'AlexCifarNet', 'CNN', 'ResNet18', 'ResNet50', "ResNet152"]
@@ -74,11 +78,21 @@ def main():
     client_dict = {}
     distill_dataset = {'x': [], 'y': []}
 
-    # Distribute the dataset into each client with respect to number of local classes
-    trainset_config, test_iid_data = divide_data(num_client=args.sys_n_client,
-                                                 num_local_class=args.sys_n_local_class,
-                                                 dataset_name=args.sys_dataset,
-                                                 i_seed=args.sys_i_seed)
+    # Distribute the dataset into each client
+    if args.domain_dir:
+        assert args.target_domain is not None, "Target domain must be specified when using domain-dir"
+        all_txts = [os.path.join(args.domain_dir, f) for f in os.listdir(args.domain_dir) if f.endswith('.txt')]
+        target_txt = os.path.join(args.domain_dir, args.target_domain)
+        if not target_txt.endswith('.txt'):
+            target_txt += '.txt'
+        source_txts = [x for x in all_txts if os.path.basename(x) != os.path.basename(target_txt)]
+        args.sys_n_client = len(source_txts)
+        trainset_config, test_iid_data = divide_domain_data(source_txts, target_txt)
+    else:
+        trainset_config, test_iid_data = divide_data(num_client=args.sys_n_client,
+                                                     num_local_class=args.sys_n_local_class,
+                                                     dataset_name=args.sys_dataset,
+                                                     i_seed=args.sys_i_seed)
 
     # Initialize each client and distill the local data.
     # (Since it is one-shot, initialization does not have to do separately)
